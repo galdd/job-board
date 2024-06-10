@@ -1,95 +1,72 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+
+import styles from '../styles/page.module.css';
+import { fetchSheetData } from '@/services/googleSheets';
+import { Job, Company } from '@/types';
+
+const Home: React.FC = () => {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const companiesData = await fetchSheetData(process.env.NEXT_PUBLIC_COMPANIES_SHEET_URL as string);
+        const jobsData = await fetchSheetData(process.env.NEXT_PUBLIC_JOBS_SHEET_URL as string);
+
+        const companiesMap: { [key: string]: Company } = companiesData.reduce((map: any, company: any) => {
+          map[company['Company Name']] = {
+            name: company['Company Name'],
+            description: company['Company Description'],
+            logo: company['Company Logo URL'],
+            website: company['Company Website URL'],
+          };
+          return map;
+        }, {});
+
+        const jobsWithCompanyData: Job[] = jobsData.map((job: any) => ({
+          company: companiesMap[job['Company Name']],
+          type: job['Job Type'],
+          description: job['Job Description'],
+          url: job['Job URL'],
+        }));
+
+        setJobs(jobsWithCompanyData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className={styles.container}>
+      <h1>Job Listings</h1>
+      {jobs.map((job, index) => (
+        <div key={index} className={styles.jobCard}>
+          <h2>{job.type} at {job.company.name}</h2>
+          <p>{job.description}</p>
+          <a href={job.url} target="_blank" rel="noopener noreferrer">Apply Here</a>
+          <div className={styles.companyInfo}>
+            <h3>Company Info</h3>
+            <p>{job.company.description}</p>
+            <img src={job.company.logo} alt={`${job.company.name} Logo`} className={styles.logo} />
+            <br />
+            <a href={job.company.website} target="_blank" rel="noopener noreferrer">Visit Company Website</a>
+          </div>
         </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      ))}
+    </div>
   );
 }
+
+export default Home;
