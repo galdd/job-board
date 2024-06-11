@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
+import { fetchSheetData } from '../services/googleSheets';
+import { Company, Job } from '../types';
+import { Input, Select, Card } from 'antd';
+import 'antd/dist/reset.css';  // Import Ant Design styles by default
 import styles from '../styles/page.module.css';
-import { fetchSheetData } from '@/services/googleSheets';
-import { Job, Company } from '@/types';
+
+const { Search } = Input;
+const { Option } = Select;
 
 const Home: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -15,23 +19,29 @@ const Home: React.FC = () => {
       try {
         const companiesData = await fetchSheetData(process.env.NEXT_PUBLIC_COMPANIES_SHEET_URL as string);
         const jobsData = await fetchSheetData(process.env.NEXT_PUBLIC_JOBS_SHEET_URL as string);
-
+        
         const companiesMap: { [key: string]: Company } = companiesData.reduce((map: any, company: any) => {
-          map[company['Company Name']] = {
-            name: company['Company Name'],
-            description: company['Company Description'],
-            logo: company['Company Logo URL'],
-            website: company['Company Website URL'],
-          };
+          if (company['Company Name']) {
+            map[company['Company Name']] = {
+              name: company['Company Name'],
+              description: company['Company Description'],
+              logo: company['Company Logo URL'],
+              website: company['Company Website URL'],
+            };
+          }
           return map;
         }, {});
 
-        const jobsWithCompanyData: Job[] = jobsData.map((job: any) => ({
-          company: companiesMap[job['Company Name']],
-          type: job['Job Type'],
-          description: job['Job Description'],
-          url: job['Job URL'],
-        }));
+        const jobsWithCompanyData: Job[] = jobsData.map((job: any) => {
+          const company = companiesMap[job['Company Name']];
+          if (!company) return null;
+          return {
+            company,
+            type: job['Job Type'],
+            description: job['Job Description'],
+            url: job['Job URL'],
+          };
+        }).filter(job => job !== null);
 
         setJobs(jobsWithCompanyData);
       } catch (error) {
@@ -50,21 +60,43 @@ const Home: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h1>Job Listings</h1>
-      {jobs.map((job, index) => (
-        <div key={index} className={styles.jobCard}>
-          <h2>{job.type} at {job.company.name}</h2>
-          <p>{job.description}</p>
-          <a href={job.url} target="_blank" rel="noopener noreferrer">Apply Here</a>
-          <div className={styles.companyInfo}>
-            <h3>Company Info</h3>
-            <p>{job.company.description}</p>
-            <img src={job.company.logo} alt={`${job.company.name} Logo`} className={styles.logo} />
-            <br />
-            <a href={job.company.website} target="_blank" rel="noopener noreferrer">Visit Company Website</a>
-          </div>
-        </div>
-      ))}
+      <div className={styles.header}>
+        <h1>Modi'in Job Board</h1>
+      </div>
+      <div className={styles.toolbar}>
+        <Search placeholder="Search jobs" style={{ width: 200, marginRight: 20 }} />
+        <Select placeholder="Filter by company" style={{ width: 200 }}>
+          {Array.from(new Set(jobs.map(job => job.company.name))).map(companyName => (
+            <Option key={companyName} value={companyName}>{companyName}</Option>
+          ))}
+        </Select>
+      </div>
+      <div className={styles.feed}>
+        {jobs.map((job, index) => (
+          <Card
+            key={index}
+            hoverable
+            className={styles.jobCard}
+          >
+            <div className={styles.cardContent}>
+              <div className={styles.companyLogo}>
+                <img alt={`${job.company.name} Logo`} src={job.company.logo} className={styles.logo} />
+              </div>
+              <div className={styles.jobInfo}>
+                <Card.Meta title={job.type} description={
+                  <div className={styles.jobDescription}>
+                    {job.description}
+                  </div>
+                } />
+                <div className={styles.companyInfo}>
+                  <h3>{job.company.name}</h3>
+                  <a href={job.url} target="_blank" rel="noopener noreferrer">Apply Here</a>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
