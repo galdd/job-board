@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { fetchSheetData } from '../services/googleSheets';
 import { Company, Job } from '../types';
 import { Input, Select, Card } from 'antd';
-import 'antd/dist/reset.css';  // Import Ant Design styles by default
 import styles from '../styles/page.module.css';
+import 'antd/dist/reset.css';  
 
 const { Search } = Input;
 const { Option } = Select;
