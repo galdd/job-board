@@ -1,9 +1,14 @@
 export interface Company {
-    name: string;
-    description: string;
-    logo: string;
-    website: string;
-  }
+  key: string;
+  name: string;
+  description: string;
+  fundingStage: string;
+  employees: string;
+  primarySector: string;
+  website: string;
+  linkedin: string;
+  logo: string; 
+}
   
   export interface Job {
     company: Company;
