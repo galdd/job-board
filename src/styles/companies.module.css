@@ -1,0 +1,36 @@
+/* companies.module.css */
+.header {
+                background: #001529;
+                color: #fff;
+                text-align: center;
+                padding: 0;
+              }
+              
+              .headerContent {
+                font-size: 24px;
+                font-weight: bold;
+                padding: 16px;
+              }
+              
+              .content {
+                padding: 24px;
+                min-height: 280px;
+              }
+              
+              .toolbar {
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+              }
+              
+              .boldText {
+                font-weight: bold;
+              }
+              
+              .companyCount {
+                margin-top: 20px;
+              }
+              
+              .footer {
+                text-align: center;
+              }

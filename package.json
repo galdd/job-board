@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "antd": "^5.18.0",
+    "antd": "^5.18.3",
     "axios": "^1.7.2",
     "dotenv": "^16.4.5",
     "googleapis": "^140.0.0",
