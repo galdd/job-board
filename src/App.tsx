@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Table, Tag, Select, Input, Layout, Button } from 'antd';
-import { LinkedinOutlined } from '@ant-design/icons';
+import { Layout, Input, Select, Button, Dropdown, Menu } from 'antd';
+import { AppstoreOutlined, UnorderedListOutlined, SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 import 'antd/dist/reset.css';
 import styles from './styles/companies.module.css';
 import { fetchLogo } from './services/fetchLogo';
 import { fetchSheetData } from './services/googleSheets';
 import { Company } from './types';
+import CompanyTable from './components/CompanyTable';
+import CompanyCard from './components/CompanyCard';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -19,6 +21,11 @@ const Companies: React.FC = () => {
   const [selectedPrimarySectors, setSelectedPrimarySectors] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedDescriptions, setExpandedDescriptions] = useState<{ [key: string]: boolean }>({});
+  const [isGridView, setIsGridView] = useState(() => {
+    return window.innerWidth < 992 || localStorage.getItem('viewMode') === 'grid';
+  });
+  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend'>('ascend');
+  const [sortField, setSortField] = useState<string>('name');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,75 +108,58 @@ const Companies: React.FC = () => {
     setExpandedDescriptions(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const columns = [
-    {
-      title: '',
-      dataIndex: 'logo',
-      key: 'logo',
-      render: (text: string) => text ? <img src={text} alt="Company Logo" width={50} height={50} /> : <div style={{ width: 50, height: 50, backgroundColor: '#ccc' }}>N/A</div>,
-    },
-    {
-      title: 'Company Name',
-      dataIndex: 'name',
-      key: 'name',
-      sorter: (a: Company, b: Company) => a.name.localeCompare(b.name),
-      render: (text: string) => <span className={styles.boldText}>{text}</span>,
-    },
-    {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (text: string, record: Company) => {
-        const isExpanded = expandedDescriptions[record.key];
-        const displayText = isExpanded || text.length <= 100 ? text : `${text.substring(0, 100)}...`;
-        return (
-          <>
-            <span>{displayText}</span>
-            {text.length > 100 && (
-              <Button type="link" onClick={() => toggleDescription(record.key)}>
-                {isExpanded ? 'Show Less' : 'Load More'}
-              </Button>
-            )}
-          </>
-        );
-      },
-    },
-    {
-      title: 'Funding Stage',
-      dataIndex: 'fundingStage',
-      key: 'fundingStage',
-      sorter: (a: Company, b: Company) => a.fundingStage.localeCompare(b.fundingStage),
-    },
-    {
-      title: 'Employees',
-      dataIndex: 'employees',
-      key: 'employees',
-      sorter: (a: Company, b: Company) => parseInt(a.employees) - parseInt(b.employees),
-    },
-    {
-      title: 'Website',
-      dataIndex: 'website',
-      key: 'website',
-      render: (text: string) => <a href={text} target="_blank" rel="noopener noreferrer">{text}</a>,
-    },
-    {
-      title: 'Linkedin',
-      dataIndex: 'linkedin',
-      key: 'linkedin',
-      render: (text: string) => <a href={text} target="_blank" rel="noopener noreferrer"><LinkedinOutlined style={{ fontSize: '20px' }} /></a>,
-    },
-    {
-      title: 'Primary Sector',
-      dataIndex: 'primarySector',
-      key: 'primarySector',
-      sorter: (a: Company, b: Company) => a.primarySector.localeCompare(b.primarySector),
-      render: (text: string) => text?.split(',').map((tag: string) => <Tag key={tag}>{tag}</Tag>),
-    },
-  ];
+  const switchViewMode = () => {
+    const newViewMode = !isGridView;
+    setIsGridView(newViewMode);
+    localStorage.setItem('viewMode', newViewMode ? 'grid' : 'table');
+  };
+
+  const handleSortChange = (field: string) => {
+    const newOrder = sortOrder === 'ascend' ? 'descend' : 'ascend';
+    setSortOrder(newOrder);
+    setSortField(field);
+
+    const sortedData = [...filteredCompanies].sort((a, b) => {
+      const aValue = a[field as keyof Company];
+      const bValue = b[field as keyof Company];
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return newOrder === 'ascend' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return newOrder === 'ascend' ? aValue - bValue : bValue - aValue;
+      } else {
+        return 0;
+      }
+    });
+
+    setFilteredCompanies(sortedData);
+  };
+
+  const sortMenu = (
+    <Menu onClick={({ key }) => handleSortChange(key)}>
+      <Menu.Item key="name">Company Name</Menu.Item>
+      <Menu.Item key="fundingStage">Funding Stage</Menu.Item>
+      <Menu.Item key="employees">Employees</Menu.Item>
+      <Menu.Item key="primarySector">Primary Sector</Menu.Item>
+    </Menu>
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 992) {
+        setIsGridView(true);
+      } else {
+        const storedViewMode = localStorage.getItem('viewMode');
+        setIsGridView(storedViewMode === 'grid');
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <Layout>
-      <Content className={styles.content}>
+      <Content className={`${styles.content} ${isGridView ? styles.gridView : ''}`}>
         <div className={styles.toolbar}>
           <Search
             placeholder="Search companies"
@@ -199,32 +189,38 @@ const Companies: React.FC = () => {
               <Option key={sector} value={sector}>{sector}</Option>
             ))}
           </Select>
+          {window.innerWidth >= 768 && (
+            <>
+              <Button
+                className={styles.viewButton}
+                onClick={switchViewMode}
+                icon={isGridView ? <UnorderedListOutlined /> : <AppstoreOutlined />}
+              />
+              <Dropdown overlay={sortMenu}>
+                <Button>
+                  Sort By {sortOrder === 'ascend' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+                </Button>
+              </Dropdown>
+            </>
+          )}
+          {window.innerWidth < 768 && (
+            <Dropdown overlay={sortMenu}>
+              <Button>
+                Sort By {sortOrder === 'ascend' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+              </Button>
+            </Dropdown>
+          )}
         </div>
-        <div className={styles.tableContainer}>
-          <Table
-            columns={columns}
-            dataSource={filteredCompanies}
+        {isGridView ? (
+          <CompanyCard companies={filteredCompanies} />
+        ) : (
+          <CompanyTable
+            companies={filteredCompanies}
+            expandedDescriptions={expandedDescriptions}
+            toggleDescription={toggleDescription}
             loading={loading}
-            pagination={{ pageSize: 8, position: ['bottomLeft'] }}
-            rowKey="name"
           />
-        </div>
-        <div className={styles.cardContainer}>
-          {filteredCompanies.map(company => (
-            <div className={styles.card} key={company.key}>
-              <img src={company.logo || ''} alt={company.name} width={50} height={50} />
-              <div className={styles.cardContent}>
-                <h3>{company.name}</h3>
-                <p>{company.description}</p>
-                <p><strong>Funding Stage:</strong> {company.fundingStage}</p>
-                <p><strong>Employees:</strong> {company.employees}</p>
-                <p><strong>Primary Sector:</strong> {company.primarySector}</p>
-                <p><a href={company.website} target="_blank" rel="noopener noreferrer">Website</a></p>
-                <p><a href={company.linkedin} target="_blank" rel="noopener noreferrer"><LinkedinOutlined style={{ fontSize: '20px' }} /></a></p>
-              </div>
-            </div>
-          ))}
-        </div>
+        )}
         <div className={styles.companyCount}>
           Total Companies: {filteredCompanies.length}
         </div>
