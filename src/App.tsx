@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Table, Tag, Select, Input, Layout } from 'antd';
+import { Table, Tag, Select, Input, Layout, Button } from 'antd';
 import { LinkedinOutlined } from '@ant-design/icons';
-import 'antd/dist/reset.css';  // Import Ant Design styles by default
+import 'antd/dist/reset.css';
 import styles from './styles/companies.module.css';
 import { fetchLogo } from './services/fetchLogo';
 import { fetchSheetData } from './services/googleSheets';
@@ -18,6 +18,7 @@ const Companies: React.FC = () => {
   const [selectedFundingStages, setSelectedFundingStages] = useState<string[]>([]);
   const [selectedPrimarySectors, setSelectedPrimarySectors] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedDescriptions, setExpandedDescriptions] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,11 +31,10 @@ const Companies: React.FC = () => {
               const domain = new URL(company['Website']).hostname;
               logo = await fetchLogo(domain);
             } catch (e) {
-              // console.error(`Invalid URL: ${company['Website']}`);
               logo = '';
             }
           } else if (!logo) {
-            logo = ''; // Set empty string if no logo is found
+            logo = '';
           }
           return {
             key: company['Company Name'],
@@ -51,7 +51,7 @@ const Companies: React.FC = () => {
         setCompanies(formattedData);
         setFilteredCompanies(formattedData);
       } catch (error) {
-        // console.error('Error fetching data:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
@@ -97,6 +97,10 @@ const Companies: React.FC = () => {
     handleFilterChange();
   };
 
+  const toggleDescription = (key: string) => {
+    setExpandedDescriptions(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   const columns = [
     {
       title: '',
@@ -115,6 +119,20 @@ const Companies: React.FC = () => {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
+      render: (text: string, record: Company) => {
+        const isExpanded = expandedDescriptions[record.key];
+        const displayText = isExpanded || text.length <= 100 ? text : `${text.substring(0, 100)}...`;
+        return (
+          <>
+            <span>{displayText}</span>
+            {text.length > 100 && (
+              <Button type="link" onClick={() => toggleDescription(record.key)}>
+                {isExpanded ? 'Show Less' : 'Load More'}
+              </Button>
+            )}
+          </>
+        );
+      },
     },
     {
       title: 'Funding Stage',
@@ -182,13 +200,31 @@ const Companies: React.FC = () => {
             ))}
           </Select>
         </div>
-        <Table
-          columns={columns}
-          dataSource={filteredCompanies}
-          loading={loading}
-          pagination={{ pageSize: 8, position: ['bottomLeft'] }}
-          rowKey="name"
-        />
+        <div className={styles.tableContainer}>
+          <Table
+            columns={columns}
+            dataSource={filteredCompanies}
+            loading={loading}
+            pagination={{ pageSize: 8, position: ['bottomLeft'] }}
+            rowKey="name"
+          />
+        </div>
+        <div className={styles.cardContainer}>
+          {filteredCompanies.map(company => (
+            <div className={styles.card} key={company.key}>
+              <img src={company.logo || ''} alt={company.name} width={50} height={50} />
+              <div className={styles.cardContent}>
+                <h3>{company.name}</h3>
+                <p>{company.description}</p>
+                <p><strong>Funding Stage:</strong> {company.fundingStage}</p>
+                <p><strong>Employees:</strong> {company.employees}</p>
+                <p><strong>Primary Sector:</strong> {company.primarySector}</p>
+                <p><a href={company.website} target="_blank" rel="noopener noreferrer">Website</a></p>
+                <p><a href={company.linkedin} target="_blank" rel="noopener noreferrer"><LinkedinOutlined style={{ fontSize: '20px' }} /></a></p>
+              </div>
+            </div>
+          ))}
+        </div>
         <div className={styles.companyCount}>
           Total Companies: {filteredCompanies.length}
         </div>

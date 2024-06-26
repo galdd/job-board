@@ -2,9 +2,20 @@ import axios from 'axios';
 
 const clearbitLogoURL = 'https://logo.clearbit.com/';
 
+
+const axiosInstance = axios.create();
+
+axiosInstance.interceptors.response.use(
+  response => response,
+  error => {
+
+    return Promise.reject(error);
+  }
+);
+
 export const fetchLogo = async (domain: string) => {
   try {
-    const response = await axios.get(`${clearbitLogoURL}${domain}`, {
+    const response = await axiosInstance.get(`${clearbitLogoURL}${domain}`, {
       validateStatus: (status) => {
         return status < 500; 
       }
@@ -16,7 +27,7 @@ export const fetchLogo = async (domain: string) => {
       return ''; 
     }
   } catch (error) {
-    // console.error('Error fetching logo:', error);
+    // Silent handling of error
     return '';
   }
 };
