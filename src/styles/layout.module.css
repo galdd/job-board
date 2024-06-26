@@ -1,0 +1,65 @@
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.header {
+  background: #001529;
+  padding: 0;
+  color: white;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.content {
+  margin: 24px 16px;
+  padding: 24px;
+  background: #fff;
+  min-height: 280px;
+}
+
+.footer {
+  text-align: center;
+}
+
+.sider {
+  background: #001529;
+}
+
+.logoContainer {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  height: 48px;
+}
+
+.filters {
+  padding: 20px;
+}
+
+.filterSection {
+  margin-bottom: 20px;
+}
+
+.toolbar {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.companyCount {
+  margin-top: 20px;
+  text-align: right;
+  }
